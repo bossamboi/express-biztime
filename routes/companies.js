@@ -3,6 +3,7 @@
 //biztime database setup
 
 const express = require("express");
+const slugify = require("slugify");
 const { NotFoundError, BadRequestError } = require("../expressError");
 const db = require("../db");
 const router = new express.Router();
@@ -38,24 +39,27 @@ router.get("/:code", async (req, res) => {
 		throw new NotFoundError();
 	}
 
-  const iResults = await db.query(
-    `SELECT id
+	const iResults = await db.query(
+		`SELECT id
       FROM invoices
       WHERE comp_code = $1`,
-      [code]
-  )
+		[code]
+	);
 
-  const invoices = iResults.rows.map( inv => inv.id );
-  company.invoices = invoices;
+	const invoices = iResults.rows.map((inv) => inv.id);
+	company.invoices = invoices;
 
 	return res.json({ company });
 });
 
-
-
 /** Create new company */
 router.post("/", async (req, res) => {
-	const { code, name, description } = req.body;
+	const { name, description } = req.body;
+
+	const code = slugify(name, {
+		lower: true,
+		replacement: "_",
+	});
 
 	const results = await db.query(
 		`INSERT INTO companies (code, name, description)
@@ -73,9 +77,9 @@ router.put("/:code", async (req, res) => {
 
 	const { name, description } = req.body;
 
-  if (!name || !description) {
-    throw new BadRequestError();
-  }
+	if (!name || !description) {
+		throw new BadRequestError();
+	}
 
 	const results = await db.query(
 		`UPDATE companies
