@@ -3,7 +3,7 @@
 //biztime database setup
 
 const express = require("express");
-const { ValueError, NotFoundError } = require("../expressError");
+const { NotFoundError } = require("../expressError");
 const db = require("../db");
 const router = new express.Router();
 
@@ -17,9 +17,7 @@ router.get("/", async (req, res) => {
 	);
 
 	const companies = results.rows;
-	if (!companies) {
-		throw new NotFoundError();
-	}
+
 	return res.json({ companies });
 });
 
