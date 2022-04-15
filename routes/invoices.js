@@ -7,7 +7,6 @@ const { NotFoundError, BadRequestError } = require("../expressError");
 const db = require("../db");
 const router = new express.Router();
 
-
 /** Return list of all invoices */
 router.get("/", async (req, res) => {
 	const results = await db.query(
@@ -21,10 +20,8 @@ router.get("/", async (req, res) => {
 	return res.json({ invoices });
 });
 
-
 /** Return one invoice*/
 router.get("/:id", async (req, res) => {
-
 	const results = await db.query(
 		`SELECT code, name, description, id, amt, paid, add_date, paid_date
             FROM invoices
@@ -40,7 +37,7 @@ router.get("/:id", async (req, res) => {
 	}
 
 	const invoice = {
-		invoice:{
+		invoice: {
 			id: result.id,
 			amt: result.amt,
 			paid: result.paid,
@@ -49,13 +46,12 @@ router.get("/:id", async (req, res) => {
 			company: {
 				code: result.code,
 				name: result.name,
-				description: result.description
-			}
-		}
-	}
+				description: result.description,
+			},
+		},
+	};
 	return res.json(invoice);
 });
-
 
 /** Adds new invoice */
 router.post("/", async (req, res) => {
@@ -72,24 +68,33 @@ router.post("/", async (req, res) => {
 		const invoice = results.rows[0];
 
 		return res.status(201).json({ invoice });
-
 	} catch {
 		throw new BadRequestError();
 	}
 });
 
-
 /** Updates invoice amt. */
 router.put("/:id", async (req, res) => {
-	const { amt } = req.body;
+	const { amt, paid } = req.body;
+
+	const date = new Date();
+	const [month, day, year] = [
+		date.getMonth() + 1,
+		date.getDate(),
+		date.getFullYear(),
+	];
+
+	const todaysDate = `${year}-${month}-${day}`;
+
+	const paid_date = paid === true ? todaysDate : null;
 
 	try {
 		const result = await db.query(
 			`UPDATE invoices
-					SET amt=$1
-					WHERE id=$2
+					SET amt=$1, paid=$2, paid_date=$3
+					WHERE id=$4
 					RETURNING id, comp_code, amt, paid, add_date, paid_date`,
-			[amt, req.params.id]
+			[amt, paid, paid_date, req.params.id]
 		);
 
 		const invoice = result.rows[0];
@@ -98,7 +103,6 @@ router.put("/:id", async (req, res) => {
 			throw new NotFoundError();
 		}
 		return res.json({ invoice });
-
 	} catch (err) {
 		if (!(err instanceof NotFoundError)) {
 			throw new BadRequestError();
@@ -107,13 +111,11 @@ router.put("/:id", async (req, res) => {
 	}
 });
 
-
 /**Deletes Invoice */
 router.delete("/:id", async (req, res) => {
-	const results = await db.query(
-		`DELETE FROM invoices WHERE id=$1`,
-		[req.params.id]
-	);
+	const results = await db.query(`DELETE FROM invoices WHERE id=$1`, [
+		req.params.id,
+	]);
 
 	if (!results.rowCount) {
 		throw new NotFoundError();
@@ -121,6 +123,5 @@ router.delete("/:id", async (req, res) => {
 
 	return res.json({ status: "deleted" });
 });
-
 
 module.exports = router;
